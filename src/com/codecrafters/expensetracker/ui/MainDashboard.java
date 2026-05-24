@@ -165,14 +165,21 @@ public class MainDashboard extends JFrame {
         centre.add(Box.createVerticalStrut(14));
  
         // Feature buttons
-        centre.add(makeNavButton("\u2795  Add Transaction",       COLOR_BTN,
-                                 "Opens the Add Transaction form"));
-        centre.add(Box.createVerticalStrut(12));
-        centre.add(makeNavButton("\uD83D\uDCCB  Transaction History",   new Color(60, 100, 160),
-                                 "View your full transaction history"));
-        centre.add(Box.createVerticalStrut(12));
-        centre.add(makeNavButton("\uD83D\uDCC8  Category Summary",      new Color(38, 109, 80),
-                                 "See spending grouped by category"));
+            centre.add(makeNavButton("\u2795  Add Transaction", COLOR_BTN,
+        	    "Opens the Add Transaction form",
+        	    e -> new AddTransactionScreen(dbManager, this)));
+
+        	centre.add(Box.createVerticalStrut(12));
+
+        	centre.add(makeNavButton("\uD83D\uDCCB  Transaction History", new Color(60, 100, 160),
+        	    "View your full transaction history",
+        	    e -> new TransactionHistoryScreen(dbManager, this)));
+
+        	centre.add(Box.createVerticalStrut(12));
+
+        	centre.add(makeNavButton("\uD83D\uDCC8  Category Summary", new Color(38, 109, 80),
+        	    "See spending grouped by category",
+        	    e -> new CategorySummaryScreen(dbManager)));
  
         return centre;
     }
@@ -231,16 +238,16 @@ public class MainDashboard extends JFrame {
         balanceValueLabel.setText(String.format("$%.2f", balance));
         balanceValueLabel.setForeground(balance >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE);
     }
- 
     /**
      * Creates a styled navigation button for a dashboard feature.
      *
      * @param text    the button label (may include an emoji prefix)
      * @param color   the background fill colour
      * @param tooltip the tooltip text shown on hover
+     * @param action  the action to perform when the button is clicked
      * @return a configured full-width {@link JButton}
      */
-    private JButton makeNavButton(String text, Color color, String tooltip) {
+    private JButton makeNavButton(String text, Color color, String tooltip,java.awt.event.ActionListener action) {
         JButton btn = new JButton(text);
         btn.setFont(new Font("Arial", Font.BOLD, 14));
         btn.setBackground(color);
@@ -254,9 +261,7 @@ public class MainDashboard extends JFrame {
         btn.setBorder(new EmptyBorder(0, 18, 0, 0));
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setToolTipText(tooltip);
- 
-        // TODO: add ActionListeners here when child screens are ready
-        // e.g. btn.addActionListener(e -> new AddTransactionScreen(dbManager, this));
+        btn.addActionListener(action);
         return btn;
     }
  
