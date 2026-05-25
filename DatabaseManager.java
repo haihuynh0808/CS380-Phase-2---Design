@@ -1,7 +1,9 @@
 package final_project;
 
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
+import java.time.LocalDate;
 
 /**
  * Handles database operations for the Smart Expense Tracker application.
@@ -12,7 +14,7 @@ import java.util.*;
  */
 public class DatabaseManager {
  
-    private String url = "jdbc:mysql://localhost:3306/AppDB";
+    private String url = "jdbc:mysql://localhost:3306/OHKDB";
     private String username = "root";
     private String password = "cs380";
 
@@ -177,30 +179,32 @@ public class DatabaseManager {
      * Inserts a transaction into the transactions table.
      *
      * @param transaction the Transaction object to insert
+     * @return true if inserted successfully, otherwise false
      */
-    public void insertTransaction(Transaction transaction) {
+    public boolean insertTransaction(Transaction transaction) {
         String query = "INSERT INTO transactions (userId, type, amount, category, date, description) "
-                     + "VALUES (?, ?, ?, ?, ?, ?)";
+                + "VALUES (?, ?, ?, ?, ?, ?)";
 
         try {
-            Connection con = connect();
-            PreparedStatement ps = con.prepareStatement(query);
+        	Connection con = connect();
+        	PreparedStatement ps = con.prepareStatement(query);
 
-            ps.setInt(1, transaction.getUserId());
-            ps.setString(2, transaction.getType());
-            ps.setDouble(3, transaction.getAmount());
-            ps.setString(4, transaction.getCategory());
-            ps.setString(5, transaction.getDate());
-            ps.setString(6, transaction.getDescription());
+        	ps.setInt(1, transaction.getUserId());
+        	ps.setString(2, transaction.getType());
+        	ps.setDouble(3, transaction.getAmount());
+        	ps.setString(4, transaction.getCategory());
+        	ps.setDate(5, Date.valueOf(transaction.getDate()));
+        	ps.setString(6, transaction.getDescription());
 
-            ps.executeUpdate();
+        	ps.executeUpdate();
 
-            ps.close();
-            con.close();
+        	ps.close();
+        	con.close();
 
-            System.out.println("Transaction inserted successfully.");
+        	return true;
         } catch (Exception e) {
-            System.out.println("Insert transaction failed: " + e.getMessage());
+        	System.out.println("Insert transaction failed: " + e.getMessage());
+        	return false;
         }
     }
 
@@ -208,8 +212,9 @@ public class DatabaseManager {
      * Updates an existing transaction in the transactions table.
      *
      * @param transaction the updated Transaction object
+     * @return true if updated successfully, otherwise false
      */
-    public void updateTransaction(Transaction transaction) {
+    public boolean updateTransaction(Transaction transaction) {
         String query = "UPDATE transactions SET type = ?, amount = ?, category = ?, date = ?, description = ? "
                      + "WHERE id = ?";
 
@@ -220,18 +225,19 @@ public class DatabaseManager {
             ps.setString(1, transaction.getType());
             ps.setDouble(2, transaction.getAmount());
             ps.setString(3, transaction.getCategory());
-            ps.setString(4, transaction.getDate());
+            ps.setDate(4, Date.valueOf(transaction.getDate()));
             ps.setString(5, transaction.getDescription());
             ps.setInt(6, transaction.getId());
 
-            ps.executeUpdate();
+            int rows = ps.executeUpdate();
 
             ps.close();
             con.close();
 
-            System.out.println("Transaction updated successfully.");
+            return rows > 0;
         } catch (Exception e) {
             System.out.println("Update transaction failed: " + e.getMessage());
+            return false;
         }
     }
 
@@ -239,8 +245,9 @@ public class DatabaseManager {
      * Deletes a transaction from the transactions table using its ID.
      *
      * @param id the ID of the transaction to delete
+     * @return true if deleted successfully, otherwise false
      */
-    public void deleteTransaction(int id) {
+    public boolean deleteTransaction(int id) {
         String query = "DELETE FROM transactions WHERE id = ?";
 
         try {
@@ -248,14 +255,15 @@ public class DatabaseManager {
             PreparedStatement ps = con.prepareStatement(query);
 
             ps.setInt(1, id);
-            ps.executeUpdate();
+            int rows = ps.executeUpdate();
 
             ps.close();
             con.close();
 
-            System.out.println("Transaction deleted successfully.");
+            return rows > 0;
         } catch (Exception e) {
             System.out.println("Delete transaction failed: " + e.getMessage());
+            return false;
         }
     }
 
@@ -283,8 +291,13 @@ public class DatabaseManager {
                 String type = rs.getString("type");
                 double amount = rs.getDouble("amount");
                 String category = rs.getString("category");
-                String date = rs.getString("date");
+                Date sqlDate = rs.getDate("date");
                 String description = rs.getString("description");
+                
+                LocalDate date = null;
+                if (sqlDate != null) {
+                    date = sqlDate.toLocalDate();
+                }
 
                 Transaction transaction = new Transaction(id, userId, type, amount, category, date, description);
                 transactions.add(transaction);
@@ -301,42 +314,50 @@ public class DatabaseManager {
     }
 
     /**
-     * Fetches all transactions in the database.
-     * Useful for the Admin role later.
+     * Fetches one transaction by its ID.
      *
-     * @return an ArrayList of all Transaction objects
+     * @param id the transaction ID
+     * @return the transaction if found, otherwise null
      */
-    public ArrayList<Transaction> fetchAllTransactions() {
-        ArrayList<Transaction> transactions = new ArrayList<Transaction>();
-
-        String query = "SELECT * FROM transactions ORDER BY userId, date";
+    public Transaction fetchTransactionById(int id) {
+        String query = "SELECT * FROM transactions WHERE id = ?";
 
         try {
             Connection con = connect();
             PreparedStatement ps = con.prepareStatement(query);
+            ps.setInt(1, id);
 
             ResultSet rs = ps.executeQuery();
 
-            while (rs.next()) {
-                int id = rs.getInt("id");
+            if (rs.next()) {
                 int userId = rs.getInt("userId");
                 String type = rs.getString("type");
                 double amount = rs.getDouble("amount");
                 String category = rs.getString("category");
-                String date = rs.getString("date");
+                Date sqlDate = rs.getDate("date");
                 String description = rs.getString("description");
 
+                LocalDate date = null;
+                if (sqlDate != null) {
+                    date = sqlDate.toLocalDate();
+                }
+
                 Transaction transaction = new Transaction(id, userId, type, amount, category, date, description);
-                transactions.add(transaction);
+
+                rs.close();
+                ps.close();
+                con.close();
+
+                return transaction;
             }
 
             rs.close();
             ps.close();
             con.close();
         } catch (Exception e) {
-            System.out.println("Fetch all transactions failed: " + e.getMessage());
+            System.out.println("Fetch transaction by ID failed: " + e.getMessage());
         }
 
-        return transactions;
+        return null;
     }
 }
