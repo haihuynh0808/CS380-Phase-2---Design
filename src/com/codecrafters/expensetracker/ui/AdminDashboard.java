@@ -1,6 +1,8 @@
 package com.codecrafters.expensetracker.ui;
 
 import com.codecrafters.expensetracker.database.DatabaseManager;
+import com.codecrafters.expensetracker.manager.TransactionManager;
+import com.codecrafters.expensetracker.model.SessionManager;
 import com.codecrafters.expensetracker.model.SessionManager;
  
 import javax.swing.*;
@@ -60,6 +62,7 @@ public class AdminDashboard extends JFrame {
     // Backend 
     /** Shared database access object passed to child admin screens. */
     private final DatabaseManager dbManager;
+    private final TransactionManager transactionManager;
  
     // Stat labels — updated by refreshStats() 
     /** Displays total number of registered users. */
@@ -79,8 +82,9 @@ public class AdminDashboard extends JFrame {
      *
      * @param dbManager the shared {@link DatabaseManager}; must not be null
      */
-    public AdminDashboard(DatabaseManager dbManager) {
-        this.dbManager = dbManager;
+    public AdminDashboard(DatabaseManager dbManager, TransactionManager transactionManager) {
+        this.dbManager          = dbManager;
+        this.transactionManager = transactionManager;
         initWindow();
         buildUI();
         setVisible(true);
@@ -204,20 +208,21 @@ public class AdminDashboard extends JFrame {
  
         // Admin action buttons
         centre.add(makeAdminButton(
-            "\uD83D\uDC65  Manage Users",
-            COLOR_TEAL,
-            "View, activate, deactivate, or delete user accounts"));
-        centre.add(Box.createVerticalStrut(12));
-        centre.add(makeAdminButton(
-            "\uD83D\uDCB3  All Transactions",
-            COLOR_TEAL2,
-            "Browse and edit every transaction in the system"));
-        centre.add(Box.createVerticalStrut(12));
-        centre.add(makeAdminButton(
-            "\uD83E\uDDEA  Insert Test Data",
-            new Color(90, 60, 130),
-            "Quickly seed the database with sample users and transactions"));
- 
+        	    "\uD83D\uDC65  Manage Users", COLOR_TEAL,
+        	    "View, activate, deactivate, or delete user accounts",
+        	    e -> new AdminUserListScreen(dbManager, transactionManager)));
+        	centre.add(Box.createVerticalStrut(12));
+        	centre.add(makeAdminButton(
+        	    "\uD83D\uDCB3  All Transactions", COLOR_TEAL2,
+        	    "Browse and edit every transaction in the system",
+        	    e -> new AdminAllTransactionsScreen(dbManager, transactionManager)));
+        	centre.add(Box.createVerticalStrut(12));
+        	centre.add(makeAdminButton(
+        	    "\uD83E\uDDEA  Insert Test Data", new Color(90, 60, 130),
+        	    "Quickly seed the database with sample users and transactions",
+        	    e -> JOptionPane.showMessageDialog(this,
+        	        "Test data inserted via stub DatabaseManager.",
+        	        "Insert Test Data", JOptionPane.INFORMATION_MESSAGE)));
         return centre;
     }
  
@@ -310,7 +315,7 @@ public class AdminDashboard extends JFrame {
      * @param tooltip the tooltip shown on hover
      * @return a configured {@link JButton}
      */
-    private JButton makeAdminButton(String text, Color color, String tooltip) {
+    private JButton makeAdminButton(String text, Color color, String tooltip, java.awt.event.ActionListener action) {
         JButton btn = new JButton(text);
         btn.setFont(new Font("Arial", Font.BOLD, 14));
         btn.setBackground(color);
@@ -324,8 +329,8 @@ public class AdminDashboard extends JFrame {
         btn.setBorder(new EmptyBorder(0, 18, 0, 0));
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setToolTipText(tooltip);
- 
-        // TODO: add ActionListeners when admin sub-screens are ready
+        btn.addActionListener(action);
+
         return btn;
     }
  
@@ -344,7 +349,7 @@ public class AdminDashboard extends JFrame {
         if (confirm == JOptionPane.YES_OPTION) {
             SessionManager.logout();
             dispose();
-            new LoginScreen(dbManager);
+            new LoginScreen(dbManager, transactionManager);
         }
     }
 }
