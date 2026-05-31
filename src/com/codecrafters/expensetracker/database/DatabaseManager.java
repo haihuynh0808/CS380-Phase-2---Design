@@ -10,7 +10,7 @@ import java.util.ArrayList;
  * Replace with the real JDBC version when connecting to Hai's database.
  *
  * @author  Hai Huynh  (stub written by Omar Lorenzo Jimenez)
- * @version 1.0-stub
+ * @version 1.0
  */
 public class DatabaseManager {
 
@@ -66,7 +66,6 @@ public class DatabaseManager {
      */
     public boolean insertUser(User user) {
         if (usernameExists(user.getUsername())) return false;
-        System.out.println("[STUB] insertUser: " + user.getUsername());
         return true;
     }
 
@@ -86,8 +85,6 @@ public class DatabaseManager {
             transaction.getDescription()
         );
         store.add(t);
-        System.out.println("[STUB] insertTransaction: " + t.getType()
-            + " $" + t.getAmount());
     }
 
     /**
@@ -103,7 +100,6 @@ public class DatabaseManager {
                 t.setCategory(transaction.getCategory());
                 t.setDate(transaction.getDate());
                 t.setDescription(transaction.getDescription());
-                System.out.println("[STUB] updateTransaction id=" + t.getId());
                 return;
             }
         }
@@ -116,7 +112,6 @@ public class DatabaseManager {
      */
     public void deleteTransaction(int id) {
         store.removeIf(t -> t.getId() == id);
-        System.out.println("[STUB] deleteTransaction id=" + id);
     }
 
     /**
@@ -163,6 +158,5 @@ public class DatabaseManager {
      */
     public void deleteUser(int userId) {
         store.removeIf(t -> t.getUserId() == userId);
-        System.out.println("[STUB] deleteUser: userId=" + userId);
     }
 }
