@@ -1,4 +1,5 @@
 package DBpackage;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +8,10 @@ public class DBconnect {
 
     public static Connection con = null;
 
-    
+    // =========================================================
+    //  CONNECTION
+    // =========================================================
+
     /**
      * Establishes a connection to the MySQL database.
      */
@@ -23,7 +27,10 @@ public class DBconnect {
         }
     }
 
-    
+    // =========================================================
+    //  AUTH  (login + register)
+    // =========================================================
+
     /**
      * Validates login credentials and fetches the user role.
      *
@@ -95,7 +102,10 @@ public class DBconnect {
         }
     }
 
-   
+    // =========================================================
+    //  HELPER — role guard
+    // =========================================================
+
     /**
      * Checks whether the given userID has admin privileges.
      * Use this before every admin-only operation.
@@ -118,7 +128,10 @@ public class DBconnect {
         return false;
     }
 
-    
+    // =========================================================
+    //  TRANSACTIONS — INSERT
+    // =========================================================
+
     /**
      * Inserts a new transaction for the given user.
      *
@@ -133,7 +146,6 @@ public class DBconnect {
     public static boolean insertTransaction(int userId, String type, double amount,
                                             String category, String transactionDate,
                                             String description) {
-        // Basic validation
         if (amount <= 0) {
             System.out.println("Insert failed: amount must be greater than 0.");
             return false;
@@ -151,8 +163,8 @@ public class DBconnect {
             ps.setString(2, type);
             ps.setDouble(3, amount);
             ps.setString(4, category);
-            ps.setDate(5, Date.valueOf(transactionDate));   // expects "YYYY-MM-DD"
-            ps.setString(6, description);                  // null is fine
+            ps.setDate(5, Date.valueOf(transactionDate));
+            ps.setString(6, description);
             ps.executeUpdate();
             System.out.println("Transaction inserted successfully.");
             return true;
@@ -162,18 +174,20 @@ public class DBconnect {
         }
     }
 
-    
+    // =========================================================
+    //  TRANSACTIONS — UPDATE
+    // =========================================================
+
     /**
      * Updates an existing transaction — but ONLY if it belongs to the requesting user.
-     * This enforces that users cannot tamper with each other's records.
      *
-     * @param transId         the TransID to update
+     * @param transId          the TransID to update
      * @param requestingUserId the UserID making the request (from session)
-     * @param type            new type value
-     * @param amount          new amount (must be > 0)
-     * @param category        new category
-     * @param transactionDate new date in "YYYY-MM-DD"
-     * @param description     new description (may be null)
+     * @param type             new type value
+     * @param amount           new amount (must be > 0)
+     * @param category         new category
+     * @param transactionDate  new date in "YYYY-MM-DD"
+     * @param description      new description (may be null)
      * @return true if exactly one row was updated, false if not found or not owner
      */
     public static boolean updateTransaction(int transId, int requestingUserId,
@@ -185,7 +199,6 @@ public class DBconnect {
         }
 
         try {
-            // WHERE clause includes UserID — so a user can ONLY update their own rows
             String sql = "UPDATE TRANSACTIONS "
                        + "SET Type=?, Amount=?, Category=?, TransactionDate=?, Description=? "
                        + "WHERE TransID=? AND UserID=?";
@@ -196,7 +209,7 @@ public class DBconnect {
             ps.setDate(4, Date.valueOf(transactionDate));
             ps.setString(5, description);
             ps.setInt(6, transId);
-            ps.setInt(7, requestingUserId);   // ownership check
+            ps.setInt(7, requestingUserId);
 
             int rows = ps.executeUpdate();
             if (rows == 1) {
@@ -212,7 +225,10 @@ public class DBconnect {
         }
     }
 
-    
+    // =========================================================
+    //  TRANSACTIONS — DELETE
+    // =========================================================
+
     /**
      * Deletes a transaction — but ONLY if it belongs to the requesting user.
      *
@@ -222,11 +238,10 @@ public class DBconnect {
      */
     public static boolean deleteTransaction(int transId, int requestingUserId) {
         try {
-            // WHERE clause includes UserID — ownership enforced at SQL level
             String sql = "DELETE FROM TRANSACTIONS WHERE TransID=? AND UserID=?";
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setInt(1, transId);
-            ps.setInt(2, requestingUserId);   // ownership check
+            ps.setInt(2, requestingUserId);
 
             int rows = ps.executeUpdate();
             if (rows == 1) {
@@ -242,10 +257,13 @@ public class DBconnect {
         }
     }
 
-    
+    // =========================================================
+    //  TRANSACTIONS — FETCH BY USER
+    // =========================================================
+
     /**
      * Fetches all transactions belonging to a specific user.
-     * Returns a List of String arrays for easy display:
+     * Returns a List of String arrays:
      *   [TransID, Type, Amount, Category, TransactionDate, Description]
      *
      * @param userId the UserID whose transactions to fetch (from session)
@@ -254,7 +272,6 @@ public class DBconnect {
     public static List<String[]> getTransactionsByUser(int userId) {
         List<String[]> results = new ArrayList<>();
         try {
-            // UserID in WHERE clause — users only ever see their own data
             String sql = "SELECT TransID, Type, Amount, Category, TransactionDate, Description "
                        + "FROM TRANSACTIONS WHERE UserID = ? ORDER BY TransactionDate DESC";
             PreparedStatement ps = con.prepareStatement(sql);
@@ -278,12 +295,19 @@ public class DBconnect {
         return results;
     }
 
-    
+    // =========================================================
+    //  ADMIN — VIEW ALL TRANSACTIONS
+    // =========================================================
+
     /**
-     * ADMIN Fetch all transactions across all users.
-     * TODO: Implement once core user flow is stable and tested.
+     * [ADMIN] Fetches every transaction across all users, joined with the
+     * owning user's name. Non-admins receive an empty list.
+     *
+     * Columns returned per row:
+     *   [TransID, UserName, Type, Amount, Category, TransactionDate, Description]
      *
      * @param requestingUserId must be an admin
+     * @return list of all transaction rows, empty if access denied or none found
      */
     public static List<String[]> adminGetAllTransactions(int requestingUserId) {
         if (!isAdmin(requestingUserId)) {
@@ -292,8 +316,10 @@ public class DBconnect {
         }
         List<String[]> results = new ArrayList<>();
         try {
-            String sql = "SELECT t.TransID, u.Name, t.Type, t.Amount, t.Category, t.TransactionDate, t.Description "
-                       + "FROM TRANSACTIONS t JOIN Users u ON t.UserID = u.UserID "
+            String sql = "SELECT t.TransID, u.Name, t.Type, t.Amount, "
+                       + "       t.Category, t.TransactionDate, t.Description "
+                       + "FROM TRANSACTIONS t "
+                       + "JOIN Users u ON t.UserID = u.UserID "
                        + "ORDER BY t.TransactionDate DESC";
             PreparedStatement ps = con.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
@@ -315,12 +341,76 @@ public class DBconnect {
         return results;
     }
 
+    // =========================================================
+    //  ADMIN — UPDATE ANY TRANSACTION
+    // =========================================================
+
     /**
-     * ADMIN Delete any transaction by TransID regardless of owner.
-     * TODO: Implement once core user flow is stable and tested.
+     * [ADMIN] Updates any transaction regardless of which user owns it.
+     * Non-admins are rejected immediately.
+     *
+     * @param requestingUserId must be an admin
+     * @param transId          the TransID to update
+     * @param type             new type ("income" or "expenses")
+     * @param amount           new amount (must be > 0)
+     * @param category         new category
+     * @param transactionDate  new date in "YYYY-MM-DD"
+     * @param description      new description (may be null)
+     * @return true if exactly one row was updated
+     */
+    public static boolean adminUpdateTransaction(int requestingUserId, int transId,
+                                                  String type, double amount, String category,
+                                                  String transactionDate, String description) {
+        if (!isAdmin(requestingUserId)) {
+            System.out.println("Access denied: admin only.");
+            return false;
+        }
+        if (amount <= 0) {
+            System.out.println("Admin update failed: amount must be > 0.");
+            return false;
+        }
+        if (type == null || (!type.equalsIgnoreCase("income") && !type.equalsIgnoreCase("expenses"))) {
+            System.out.println("Admin update failed: type must be 'income' or 'expenses'.");
+            return false;
+        }
+        try {
+            // No UserID filter — admin can edit any row
+            String sql = "UPDATE TRANSACTIONS "
+                       + "SET Type=?, Amount=?, Category=?, TransactionDate=?, Description=? "
+                       + "WHERE TransID=?";
+            PreparedStatement ps = con.prepareStatement(sql);
+            ps.setString(1, type);
+            ps.setDouble(2, amount);
+            ps.setString(3, category);
+            ps.setDate(4, Date.valueOf(transactionDate));
+            ps.setString(5, description);
+            ps.setInt(6, transId);
+
+            int rows = ps.executeUpdate();
+            if (rows == 1) {
+                System.out.println("Admin updated transaction ID: " + transId);
+                return true;
+            } else {
+                System.out.println("Admin update failed: TransID " + transId + " not found.");
+                return false;
+            }
+        } catch (Exception e) {
+            System.out.println("adminUpdateTransaction error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // =========================================================
+    //  ADMIN — DELETE ANY TRANSACTION
+    // =========================================================
+
+    /**
+     * [ADMIN] Deletes any transaction by TransID regardless of owner.
+     * Non-admins are rejected immediately.
      *
      * @param requestingUserId must be an admin
      * @param transId          the TransID to remove
+     * @return true if the row was deleted
      */
     public static boolean adminDeleteTransaction(int requestingUserId, int transId) {
         if (!isAdmin(requestingUserId)) {
@@ -328,6 +418,7 @@ public class DBconnect {
             return false;
         }
         try {
+            // No UserID filter — admin can delete any row
             String sql = "DELETE FROM TRANSACTIONS WHERE TransID = ?";
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setInt(1, transId);
@@ -336,7 +427,7 @@ public class DBconnect {
                 System.out.println("Admin deleted transaction ID: " + transId);
                 return true;
             } else {
-                System.out.println("Admin delete failed: transaction ID " + transId + " not found.");
+                System.out.println("Admin delete failed: TransID " + transId + " not found.");
                 return false;
             }
         } catch (Exception e) {
@@ -345,11 +436,18 @@ public class DBconnect {
         }
     }
 
+    // =========================================================
+    //  ADMIN — LIST ALL USERS
+    // =========================================================
+
     /**
-     * ADMIN List all registered users.
-     * TODO: Implement once core user flow is stable and tested.
+     * [ADMIN] Returns every registered user.
+     * Non-admins receive an empty list.
+     *
+     * Columns returned per row:  [UserID, Name, Email, Role]
      *
      * @param requestingUserId must be an admin
+     * @return list of user rows, empty if access denied or none found
      */
     public static List<String[]> adminGetAllUsers(int requestingUserId) {
         if (!isAdmin(requestingUserId)) {
@@ -374,5 +472,51 @@ public class DBconnect {
             System.out.println("adminGetAllUsers error: " + e.getMessage());
         }
         return results;
+    }
+
+    // =========================================================
+    //  ADMIN — PROMOTE / DEMOTE USER ROLE
+    // =========================================================
+
+    /**
+     * [ADMIN] Changes the role of any user.
+     * Use this to promote a user to "admin" or demote an admin back to "user".
+     * A safeguard prevents an admin from accidentally removing their own admin rights.
+     *
+     * @param requestingUserId must be an admin
+     * @param targetUserId     the UserID whose role to change
+     * @param newRole          "admin" or "user"
+     * @return true if the role was updated
+     */
+    public static boolean adminSetUserRole(int requestingUserId, int targetUserId, String newRole) {
+        if (!isAdmin(requestingUserId)) {
+            System.out.println("Access denied: admin only.");
+            return false;
+        }
+        if (newRole == null || (!newRole.equalsIgnoreCase("admin") && !newRole.equalsIgnoreCase("user"))) {
+            System.out.println("adminSetUserRole failed: role must be 'admin' or 'user'.");
+            return false;
+        }
+        if (requestingUserId == targetUserId && newRole.equalsIgnoreCase("user")) {
+            System.out.println("adminSetUserRole denied: an admin cannot remove their own admin role.");
+            return false;
+        }
+        try {
+            String sql = "UPDATE Users SET Role = ? WHERE UserID = ?";
+            PreparedStatement ps = con.prepareStatement(sql);
+            ps.setString(1, newRole.toLowerCase());
+            ps.setInt(2, targetUserId);
+            int rows = ps.executeUpdate();
+            if (rows == 1) {
+                System.out.println("Admin set UserID " + targetUserId + " role to '" + newRole + "'.");
+                return true;
+            } else {
+                System.out.println("adminSetUserRole failed: UserID " + targetUserId + " not found.");
+                return false;
+            }
+        } catch (Exception e) {
+            System.out.println("adminSetUserRole error: " + e.getMessage());
+            return false;
+        }
     }
 }
