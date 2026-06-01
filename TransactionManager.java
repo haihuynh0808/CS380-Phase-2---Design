@@ -26,27 +26,59 @@ public class TransactionManager {
      * Adds a transaction to the database.
      *
      * @param transaction the transaction to add
+     * @return true if successful, otherwise false
      */
-    public void addTransaction(Transaction transaction) {
-        db.insertTransaction(transaction);
+    public boolean addTransaction(Transaction transaction) {
+        if (transaction == null) {
+            return false;
+        }
+
+        if (transaction.getAmount() < 0) {
+            return false;
+        }
+
+        if (!transaction.getType().equalsIgnoreCase("Income")
+                && !transaction.getType().equalsIgnoreCase("Expense")) {
+            return false;
+        }
+
+        return db.insertTransaction(transaction);
     }
 
     /**
      * Updates an existing transaction in the database.
      *
      * @param transaction the updated transaction
+     * @return true if successful, otherwise false
      */
-    public void editTransaction(Transaction transaction) {
-        db.updateTransaction(transaction);
-    }
+    public boolean editTransaction(Transaction transaction) {
+        if (transaction == null) {
+            return false;
+        }
 
+        if (transaction.getId() <= 0) {
+            return false;
+        }
+
+        if (transaction.getAmount() < 0) {
+            return false;
+        }
+
+        return db.updateTransaction(transaction);
+    }
+    
     /**
      * Deletes a transaction from the database by its ID.
      *
      * @param id the ID of the transaction to delete
+     * @return true if successful, otherwise false
      */
-    public void deleteTransaction(int id) {
-        db.deleteTransaction(id);
+    public boolean deleteTransaction(int id) {
+        if (id <= 0) {
+            return false;
+        }
+
+        return db.deleteTransaction(id);
     }
 
     /**
@@ -115,6 +147,16 @@ public class TransactionManager {
 
         return summary;
     }
+    
+    /**
+     * Returns one transaction by ID.
+     *
+     * @param id the transaction ID
+     * @return the transaction if found, otherwise null
+     */
+    public Transaction getTransactionById(int id) {
+        return db.fetchTransactionById(id);
+    }
 
     /**
      * Prints all transactions for a given user to the console.
@@ -139,11 +181,10 @@ public class TransactionManager {
     public void printCategorySummary(int userId) {
         Map<String, Double> summary = getCategorySummary(userId);
         
-        Object[] keys = summary.keySet().toArray();
+        ArrayList<String> categories = new ArrayList<String>(summary.keySet());
 
-        for (int i = 0; i < keys.length; i++) {
-            String category = (String) keys[i];
-            
+        for (int i = 0; i < categories.size(); i++) {
+            String category = categories.get(i);
             System.out.println(category + ": $" + summary.get(category));
         }
     }

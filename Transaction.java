@@ -1,5 +1,7 @@
 package final_project;
 
+import java.time.LocalDate;
+
 /**
  * Represents one financial transaction in the Smart Expense Tracker application.
  * 
@@ -24,7 +26,7 @@ public class Transaction {
     private String category;
 
     // The date of the transaction. 
-    private String date;
+    private LocalDate date;
 
     // A short description or note for the transaction. 
     private String description;
@@ -41,7 +43,7 @@ public class Transaction {
      * @param description the description
      */
     public Transaction(int id, int userId, String type, double amount,
-                       String category, String date, String description) {
+                       String category, LocalDate date, String description) {
         this.id = id;
         this.userId = userId;
         this.type = type;
@@ -63,7 +65,7 @@ public class Transaction {
      * @param description the description
      */
     public Transaction(int userId, String type, double amount,
-                       String category, String date, String description) {
+                       String category, LocalDate date, String description) {
         this.userId = userId;
         this.type = type;
         this.amount = amount;
@@ -167,7 +169,7 @@ public class Transaction {
      *
      * @return the date
      */
-    public String getDate() {
+    public LocalDate getDate() {
         return date;
     }
 
@@ -176,7 +178,7 @@ public class Transaction {
      *
      * @param date the date to set
      */
-    public void setDate(String date) {
+    public void setDate(LocalDate date) {
         this.date = date;
     }
 
