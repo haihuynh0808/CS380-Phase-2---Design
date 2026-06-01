@@ -97,6 +97,10 @@ public class DatabaseManager {
      * @return true if the user was inserted successfully, otherwise false
      */
     public boolean insertUser(User user) {
+    	if (user == null) {
+    		return false;
+    	}
+    	
         if (usernameExists(user.getUsername())) {
             System.out.println("Username already exists.");
             return false;
@@ -118,13 +122,12 @@ public class DatabaseManager {
             ps.setString(3, user.getPassword());
             ps.setString(4, user.getRole());
 
-            ps.executeUpdate();
+            int rows = ps.executeUpdate();
 
             ps.close();
             con.close();
 
-            System.out.println("User inserted successfully.");
-            return true;
+            return rows > 0;
         } catch (Exception e) {
             System.out.println("Insert user failed: " + e.getMessage());
             return false;
@@ -182,6 +185,10 @@ public class DatabaseManager {
      * @return true if inserted successfully, otherwise false
      */
     public boolean insertTransaction(Transaction transaction) {
+    	if (transaction == null) {
+    		return false;
+    	}
+    	
         String query = "INSERT INTO transactions (userId, type, amount, category, date, description) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
 
@@ -196,12 +203,12 @@ public class DatabaseManager {
         	ps.setDate(5, Date.valueOf(transaction.getDate()));
         	ps.setString(6, transaction.getDescription());
 
-        	ps.executeUpdate();
+        	int rows = ps.executeUpdate();
 
         	ps.close();
         	con.close();
 
-        	return true;
+        	return rows > 0;
         } catch (Exception e) {
         	System.out.println("Insert transaction failed: " + e.getMessage());
         	return false;
@@ -215,6 +222,10 @@ public class DatabaseManager {
      * @return true if updated successfully, otherwise false
      */
     public boolean updateTransaction(Transaction transaction) {
+    	if (transaction == null) {
+    		return false;
+    	}
+    	
         String query = "UPDATE transactions SET type = ?, amount = ?, category = ?, date = ?, description = ? "
                      + "WHERE id = ?";
 
@@ -359,5 +370,151 @@ public class DatabaseManager {
         }
 
         return null;
+    }
+    
+    /**
+     * Fetches all users in the system.
+     * This is mainly for Admin use.
+     * 
+     * @return an ArrayList of all users
+     */
+    public ArrayList<User> fetchAllUsers() {
+    	ArrayList<User> users = new ArrayList<User>();
+    	String query = "SELECT * FROM users ORDER BY userID";
+    	
+    	try {
+    		Connection con = connect();
+    		PreparedStatement ps = con.prepareStatement(query);
+    		ResultSet rs = ps.executeQuery();
+    		
+    		while (rs.next()) {
+                int userId = rs.getInt("userId");
+                String username = rs.getString("username");
+                String email = rs.getString("email");
+                String password = rs.getString("password");
+                String role = rs.getString("role");
+
+                User user = new User(userId, username, email, password, role);
+                users.add(user);
+            }
+
+            rs.close();
+            ps.close();
+            con.close();
+        } catch (Exception e) {
+            System.out.println("Fetch all users failed: " + e.getMessage());
+        }
+
+        return users;
+    }
+
+    /**
+     * Fetches all transactions in the system.
+     * This is mainly for Admin use.
+     *
+     * @return an ArrayList of all transactions
+     */
+    public ArrayList<Transaction> fetchAllTransactions() {
+        ArrayList<Transaction> transactions = new ArrayList<Transaction>();
+        String query = "SELECT * FROM transactions ORDER BY userId, date";
+
+        try {
+            Connection con = connect();
+            PreparedStatement ps = con.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                int userId = rs.getInt("userId");
+                String type = rs.getString("type");
+                double amount = rs.getDouble("amount");
+                String category = rs.getString("category");
+                Date sqlDate = rs.getDate("date");
+                String description = rs.getString("description");
+
+                LocalDate date = null;
+                if (sqlDate != null) {
+                    date = sqlDate.toLocalDate();
+                }
+
+                Transaction transaction = new Transaction(id, userId, type, amount, category, date, description);
+                transactions.add(transaction);
+            }
+
+            rs.close();
+            ps.close();
+            con.close();
+        } catch (Exception e) {
+            System.out.println("Fetch all transactions failed: " + e.getMessage());
+        }
+
+        return transactions;
+    }
+
+    /**
+     * Fetches one user by ID.
+     *
+     * @param userId the user ID
+     * @return the user if found, otherwise null
+     */
+    public User fetchUserById(int userId) {
+        String query = "SELECT * FROM users WHERE userId = ?";
+
+        try {
+            Connection con = connect();
+            PreparedStatement ps = con.prepareStatement(query);
+            ps.setInt(1, userId);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                String username = rs.getString("username");
+                String email = rs.getString("email");
+                String password = rs.getString("password");
+                String role = rs.getString("role");
+
+                User user = new User(userId, username, email, password, role);
+
+                rs.close();
+                ps.close();
+                con.close();
+
+                return user;
+            }
+
+            rs.close();
+            ps.close();
+            con.close();
+        } catch (Exception e) {
+            System.out.println("Fetch user by ID failed: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Deletes a user from the users table.
+     *
+     * @param userId the user ID to delete
+     * @return true if deleted successfully, otherwise false
+     */
+    public boolean deleteUser(int userId) {
+        String query = "DELETE FROM users WHERE userId = ?";
+
+        try {
+            Connection con = connect();
+            PreparedStatement ps = con.prepareStatement(query);
+            ps.setInt(1, userId);
+
+            int rows = ps.executeUpdate();
+
+            ps.close();
+            con.close();
+
+            return rows > 0;
+        } catch (Exception e) {
+            System.out.println("Delete user failed: " + e.getMessage());
+            return false;
+        }
     }
 }
