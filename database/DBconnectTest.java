@@ -1,4 +1,4 @@
-package DBpackage;
+package com.codecrafters.expensetracker.database;;
 import java.util.List;
 
 /**

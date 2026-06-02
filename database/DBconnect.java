@@ -1,4 +1,4 @@
-package DBpackage;
+package com.codecrafters.expensetracker.database;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +14,7 @@ public class DBconnect {
     public static void connection() {
         String url      = "jdbc:mysql://localhost:3306/OHKDB";
         String username = "root";
-        String pass     = "yourpassword";
+        String pass     = "Odiseo@2026#";
         try {
             con = DriverManager.getConnection(url, username, pass);
             System.out.println("Connected successfully!");
